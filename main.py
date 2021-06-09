@@ -9,9 +9,9 @@ mkt_min = select_mkt_cap()
 
 #### Grab Tickers and Company names from magicformulainvesting.com ####
 
-ticker_data = grab_tickers(mkt_min, stock_num)
+#ticker_data = grab_tickers(mkt_min, stock_num)
 
-
+t = rank_tickers(mkt_min,stock_num)
 
 
 
