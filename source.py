@@ -1,15 +1,18 @@
 #import libraries
 #import numpy as np
 from selenium import webdriver
+from selenium.webdriver.chrome.webdriver import WebDriver
 from webdriver_manager.chrome import ChromeDriverManager
+import time
 from password import get_cred
-
+import yfinance as yf
 
 # Initiate the browser
 def init_browser():
     op = webdriver.ChromeOptions()
-    #op.add_argument('headless') # prevents browser from actually popping up
+    op.add_argument('headless') # prevents browser from actually popping up
     browser = webdriver.Chrome(ChromeDriverManager().install(),options=op)
+    browser.implicitly_wait(10)
     return browser
 
 ##### Gather 30 stocks at X mkt cap ##########
@@ -20,7 +23,6 @@ def gather_info(browser):
     before_XPath = "//*[@id='tableform']/table/tbody/tr["
     aftertd_XPath = "]/td["
     aftertr_XPath = "]"
-    browser.implicitly_wait(500)
     rows = len(browser.find_elements_by_xpath("//*[@id='tableform']/table/tbody/tr"))
     data = []
     for t_row in range(1, (rows + 1)):
@@ -102,32 +104,71 @@ def select_mkt_cap():
 
 def rank_tickers(mkt_min, num_stocks):
     t_list = grab_tickers(mkt_min, num_stocks)
-    ranked_list = []
-    browser = init_browser()
+    data = ["Ticker","ROC","Earnings Yield"]
 
     for i in range(0,num_stocks,1):
-        link = "https://www.morningstar.com/stocks/xnas/"+t_list[i][0]+"/financials"
-        browser.get(link)
-        browser.find_element_by_xpath('//*[@id="__layout"]/div/div[2]/div[3]/main/div[2]/div/div/div[1]/sal-components/section/div/div/div/div/div[2]/div/div/div[2]/div[2]/div/div[2]/div/div[2]/div[2]/div[1]/div[1]/a').click()
-        elem = browser.find_element_by_xpath('//*[@id="tabs"]')
-        browser.execute_script(elem.setAttribute('selected-tab','Quarterly'))
-        # Need to Change Annual Data to Quarterly
+
         curr_stock = t_list[i]
-        earn = calc_earnings_yield(browser,curr_stock[2])
-        
-    return t_list
+        roc, earnings_yield = get_variables(curr_stock)
+        print(curr_stock[0], roc, earnings_yield)
+        data.append([curr_stock[0],roc,earnings_yield])
+    return data
 
-def calc_earnings_yield(browser,mkt_cap):
-    frac = calc_ebit(browser)/calc_ent_val(browser,mkt_cap) * 100
-    return frac
 
-def calc_ebit(browser):
-    total_rev = '5'
-    return float(total_rev)
+def get_variables(curr_stock):
+    
+    ticker = yf.Ticker(curr_stock[0])
+    q_income = ticker.quarterly_financials
+    q_balance = ticker.quarterly_balance_sheet
+    
+    ebit = q_income.loc['Ebit'][0] 
+    mkt_cap = curr_stock[2] * pow(10,6)
+    cash = q_balance.loc['Cash'][0]
+    current_liab = q_balance.loc['Total Current Liabilities'][0]
+    long_debt = q_balance.loc['Long Term Debt'][0]
+    total_debt = (long_debt + current_liab )
 
-def calc_ent_val(browser,mkt_cap):
-    total_debt = '5'
-    cash = '5'
-    ent_val = mkt_cap/1000 + float(total_debt.replace(',','')) - float(cash.replace(',',''))
-    return ent_val
+    ent_val = mkt_cap + total_debt - cash
+    
+    
+    work_cap = q_balance.loc['Total Current Assets'][0] - q_balance.loc['Total Current Liabilities'][0]
+    fixed_assets = get_fixed_assets(curr_stock[0])
+    
+    roc = ebit / (work_cap + fixed_assets)
+    earnings_yield = ebit/ent_val
+
+    return [roc, earnings_yield]
+
+def get_fixed_assets(ticker_name):
+    browser = init_browser()
+    link = 'https://finance.yahoo.com/quote/'+ticker_name+'/balance-sheet?p='+ticker_name
+    browser.get(link)
+    browser.find_element_by_xpath('//*[@id="Col1-1-Financials-Proxy"]/section/div[1]/div[2]/button/div').click()
+    time.sleep(1)
+    browser.find_element_by_xpath('//*[@id="Col1-1-Financials-Proxy"]/section/div[4]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/button').click()
+    browser.find_element_by_xpath('//*[@id="Col1-1-Financials-Proxy"]/section/div[4]/div[1]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/button').click()
+    browser.find_element_by_xpath('//*[@id="Col1-1-Financials-Proxy"]/section/div[4]/div[1]/div[1]/div[2]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/button').click()
+    browser.find_element_by_xpath('//*[@id="Col1-1-Financials-Proxy"]/section/div[4]/div[1]/div[1]/div[2]/div[1]/div[2]/div[2]/div[2]/div[1]/div[1]/div[1]/div[1]/button').click()
+    accum = browser.find_element_by_xpath('//*[@id="Col1-1-Financials-Proxy"]/section/div[4]/div[1]/div[1]/div[2]/div[1]/div[2]/div[2]/div[2]/div[1]/div[2]/div[2]/div[1]/div[2]').text
+    accum = float(accum.replace(',',''))
+    fixed_assets = browser.find_element_by_xpath('//*[@id="Col1-1-Financials-Proxy"]/section/div[4]/div[1]/div[1]/div[2]/div[1]/div[2]/div[2]/div[1]/div[2]/span').text
+    fixed_assets = float(fixed_assets.replace(',',''))
+    
+    return fixed_assets - accum
+
+
+#print(rank_tickers(50,30))
+print(yf.Ticker('ASO').balance_sheet)
+print(yf.Ticker('BKE').balance_sheet)
+
+'''
+Variables I need:
+
+Earning Yield = EBIT/EV
+    Ent Val = Mkt_cap + Total Debt - Cash
+    EBIT = Total_Rev - Cost of Goods Sold - Operating Expenses
+
+Return on Capital = EBIT / ( Net Fixed Assests + Working Capital)
+
+'''
 
