@@ -57,8 +57,7 @@ def grab_tickers(mkt_min, stock_num):
 def login_magic(browser):
     user1,passw1 = get_cred()
 
-    #user = "elijahgrubbs@hotmail.com"
-    #password = "quigongin1"
+    
     browser.find_element_by_name("Email").send_keys(user1)
     browser.find_element_by_name("Password").send_keys(passw1)
     browser.find_element_by_id('login').click()
@@ -160,7 +159,7 @@ def get_fixed_assets(ticker_name):
 #print(rank_tickers(50,30))
 print(yf.Ticker('ASO').balance_sheet)
 print(yf.Ticker('BKE').balance_sheet)
-
+# Need to fix data that is missing
 '''
 Variables I need:
 
