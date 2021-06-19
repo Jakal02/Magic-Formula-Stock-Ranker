@@ -14,10 +14,10 @@ def get_cred():
     loc = os.path.dirname(os.path.abspath(__file__))
     is_in = find_pass_file(loc)
     if(is_in == True):
-        print("Credentials Found")
+        print("\nCredentials Found\n")
         return read_pass_file()
     else:
-        print("Credentials not found\n")
+        print("\nCredentials not found\n")
         return make_pass_file()
 
 

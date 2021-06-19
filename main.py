@@ -13,5 +13,7 @@ mkt_min = select_mkt_cap()
 
 t = rank_tickers(mkt_min,stock_num)
 
+#print(grab_tickers(mkt_min,stock_num))
 
 
+print("Done")
