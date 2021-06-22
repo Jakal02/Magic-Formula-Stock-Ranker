@@ -4,6 +4,8 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 from password import get_cred
+import os
+import csv
 # import yfinance as yf
 
 # Initiate the browser
@@ -31,7 +33,7 @@ def grab_tickers(mkt_min, stock_num):
 
     data = gather_info(browser)
     data.sort()
-    print(data)
+    #print(data)
     browser.close()
     return data
 
@@ -102,8 +104,9 @@ def select_mkt_cap():
 
 def rank_tickers(mkt_min, num_stocks):
     t_list = grab_tickers(mkt_min, num_stocks)
-    data = ["Ticker","ROC","Earnings Yield"]
+    data = [["Ticker","ROC","Earnings Yield"]]
 
+    #for i in range(0,3,1):
     for i in range(0,num_stocks,1):
         curr_stock = t_list[i]
         ticker = curr_stock[0]
@@ -126,31 +129,7 @@ def nav_to_quarterly(browser):
     browser.find_element_by_xpath('//*[@id="Col1-1-Financials-Proxy"]/section/div[1]/div[2]/button/div').click()
     time.sleep(2)
     return
-'''
-def get_variables(curr_stock):
-    
-    ticker = yf.Ticker(curr_stock[0])
-    q_income = ticker.quarterly_financials
-    q_balance = ticker.quarterly_balance_sheet
-    
-    ebit = q_income.loc['Ebit'][0] 
-    mkt_cap = curr_stock[2] * pow(10,6)
-    cash = q_balance.loc['Cash'][0]
-    current_liab = q_balance.loc['Total Current Liabilities'][0]
-    long_debt = q_balance.loc['Long Term Debt'][0]
-    total_debt = (long_debt + current_liab )
 
-    ent_val = mkt_cap + total_debt - cash
-    
-    
-    work_cap = q_balance.loc['Total Current Assets'][0] - q_balance.loc['Total Current Liabilities'][0]
-    fixed_assets = get_fixed_assets(curr_stock[0])
-    
-    roc = ebit / (work_cap + fixed_assets)
-    earnings_yield = ebit/ent_val
-
-    return [roc, earnings_yield]
-'''
 
 def scrape_variables(ticker_name, mkt):
     browser = init_browser()
@@ -184,12 +163,14 @@ def scrape_variables(ticker_name, mkt):
 
 
 def get_ebit(browser):
-
-    total_rev = get_total_rev(browser)
-    cost_of_rev = get_cost_of_rev(browser)
-    op_expenses = get_op_expenses(browser)
-
-    return total_rev - cost_of_rev - op_expenses
+    try:
+        ebit = browser.find_element_by_xpath("//*[@title='EBIT']//parent::div//following-sibling::div[2]").text
+        return text_to_float(ebit)
+    except:
+        total_rev = get_total_rev(browser)
+        cost_of_rev = get_cost_of_rev(browser)
+        op_expenses = get_op_expenses(browser)
+        return total_rev - cost_of_rev - op_expenses
 
 def get_total_rev(browser):
     
@@ -208,8 +189,16 @@ def get_op_expenses(browser):
     return text_to_float(op_exp)
 
 
+
 def get_long_debt(browser):
-    long_debt = browser.find_element_by_xpath("//*[@title='Long Term Debt And Capital Lease Obligation']//parent::div//following-sibling::div[@data-test='fin-col']").text
+    long_debt = '0'
+    try:
+        long_debt = browser.find_element_by_xpath("//*[@title='Long Term Debt And Capital Lease Obligation']//parent::div//following-sibling::div[@data-test='fin-col']").text
+    except:
+        try:
+            long_debt = browser.find_element_by_xpath("//*[@title='Total Non Current Liabilities Net Minority Interest']//parent::div//following-sibling::div[@data-test='fin-col']").text
+        except:
+            long_debt = '0'
     return text_to_float(long_debt)
 
 def get_cash(browser):
@@ -217,12 +206,14 @@ def get_cash(browser):
     return text_to_float(cash)
 
 def get_working_cap(browser):
+    try:
+        work_cap = browser.find_element_by_xpath("//*[@title='Working Capital']//parent::div//following-sibling::div[@data-test='fin-col']").text
+        return text_to_float(work_cap)
+    except:
+        current_assets = get_current_assets(browser)
+        current_liabilities = get_current_liabilities(browser)
+        return current_assets - current_liabilities
     
-    current_assets = get_current_assets(browser)
-    current_liabilities = get_current_liabilities(browser)
-
-    return current_assets - current_liabilities
-
 def get_current_assets(browser):
     
     curr_assets = browser.find_element_by_xpath("//*[@title='Current Assets']//parent::div//following-sibling::div[@data-test='fin-col']").text
@@ -235,13 +226,25 @@ def get_current_liabilities(browser):
 
 def get_fixed_assets(browser):
 
-    accum2 = browser.find_element_by_xpath("//*[@title='Accumulated Depreciation']//parent::div//following-sibling::div[@data-test='fin-col']").text
-    accum2 = text_to_float(accum2)
+    accum = get_accumulated_depreciation(browser)
 
-    fixed_assets2 = browser.find_element_by_xpath("//*[@title='Net PPE']//parent::div//following-sibling::div[@data-test='fin-col']").text
-    fixed_assets2 = text_to_float(fixed_assets2)
+    fixed_assets = get_net_ppe(browser)
 
-    return fixed_assets2 - accum2
+    return fixed_assets - accum
+
+def get_accumulated_depreciation(browser):
+    accum = '0'
+    try:
+        accum = browser.find_element_by_xpath("//*[@title='Accumulated Depreciation']//parent::div//following-sibling::div[@data-test='fin-col']").text
+    except:
+        accum = '0'
+    accum = text_to_float(accum)
+    return accum
+
+def get_net_ppe(browser):
+    fixed_assets = browser.find_element_by_xpath("//*[@title='Net PPE']//parent::div//following-sibling::div[@data-test='fin-col']").text
+    return text_to_float(fixed_assets)
+
 
 
 def expand_sheet(browser):
@@ -261,9 +264,18 @@ def expand_sheet(browser):
     return
 
 def text_to_float(number):
-    return float(number.replace(',',''))
+    if number != "-":
+        return float(number.replace(',',''))
+    return 0
 
-
+def data_to_csv(data):
+    loc = os.path.dirname(os.path.abspath(__file__))
+    with open('data.csv', 'w') as csvfile:
+        # delimiter=',', quoting=csv.QUOTE_ALL
+        filewriter = csv.writer(csvfile,delimiter=',',lineterminator='\n')
+        for row in data:
+            filewriter.writerow(row)
+    return
 
 
 #######################################################################
@@ -273,8 +285,7 @@ def text_to_float(number):
 #print(yf.Ticker('ASO').balance_sheet)
 #print(yf.Ticker('BKE').balance_sheet)
 # Need to fix data that is missing
-print(scrape_variables('BKE', 5))
-
+print(scrape_variables('ASO', 3608.08))
 
 '''
 Variables I need:
