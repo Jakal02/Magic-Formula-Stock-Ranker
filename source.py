@@ -106,14 +106,21 @@ def rank_tickers(mkt_min, num_stocks):
     t_list = grab_tickers(mkt_min, num_stocks)
     data = [["Ticker","ROC","Earnings Yield"]]
 
-    #for i in range(0,3,1):
+    
+
+    #for i in range(0,2,1):
     for i in range(0,num_stocks,1):
+        print('Working on stock',i+1,'of',num_stocks)
         curr_stock = t_list[i]
         ticker = curr_stock[0]
         roc, earnings_yield = scrape_variables(ticker, curr_stock[2])
-        print(ticker+':', roc, earnings_yield)
+        print(ticker+':', roc, earnings_yield,'\n')
+        
+        row = [ticker,roc,earnings_yield]
+        #data_to_csv([row])
+        data.append(row)
 
-        data.append([ticker,roc,earnings_yield])
+    data_to_csv(data)
 
     return data
 
@@ -158,6 +165,7 @@ def scrape_variables(ticker_name, mkt):
     earn_yield = ebit / ent_val
     roc = ebit / (work_cap + fixed_assets)
 
+    
     return [roc, earn_yield]
 
 
@@ -221,7 +229,7 @@ def get_current_assets(browser):
 
 def get_current_liabilities(browser):
     
-    curr_liab = browser.find_element_by_xpath("//*[@title='Total Liabilities Net Minority Interest']//parent::div//following-sibling::div[@data-test='fin-col']").text
+    curr_liab = browser.find_element_by_xpath("//*[@title='Current Liabilities']//parent::div//following-sibling::div[@data-test='fin-col']").text
     return text_to_float(curr_liab)
 
 def get_fixed_assets(browser):
@@ -248,6 +256,12 @@ def get_net_ppe(browser):
 
 
 def expand_sheet(browser):
+    
+    expand = browser.find_element_by_xpath('//*[@id="Col1-1-Financials-Proxy"]/section/div[2]/button/div/span')
+    if(expand.text == 'Expand All'):
+        button = browser.find_element_by_class_name('expandPf')
+        browser.execute_script("arguments[0].click();", button)
+    '''
     used=[]
     all_clicked = False
     while not all_clicked:
@@ -261,6 +275,7 @@ def expand_sheet(browser):
                 used.append(button)
                 browser.execute_script("arguments[0].click();", button)
         #time.sleep(0.5)
+    '''
     return
 
 def text_to_float(number):
@@ -268,14 +283,15 @@ def text_to_float(number):
         return float(number.replace(',',''))
     return 0
 
-def data_to_csv(data):
+def data_to_csv(data, style='w'):
     loc = os.path.dirname(os.path.abspath(__file__))
-    with open('data.csv', 'w') as csvfile:
+    with open('data.csv', style) as csvfile:
         # delimiter=',', quoting=csv.QUOTE_ALL
         filewriter = csv.writer(csvfile,delimiter=',',lineterminator='\n')
         for row in data:
             filewriter.writerow(row)
     return
+
 
 
 #######################################################################
@@ -285,7 +301,8 @@ def data_to_csv(data):
 #print(yf.Ticker('ASO').balance_sheet)
 #print(yf.Ticker('BKE').balance_sheet)
 # Need to fix data that is missing
-print(scrape_variables('ASO', 3608.08))
+
+print(scrape_variables('WTRH', 221.54))
 
 '''
 Variables I need:
