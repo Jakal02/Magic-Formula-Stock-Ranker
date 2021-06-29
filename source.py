@@ -100,13 +100,11 @@ def select_mkt_cap():
     return val
 
 
-##### Rank 30/50 stocks based on ROC and Enterprise Value ##########
+##### Write 30/50 stocks ROC and Enterprise Value to csv file ##########
 
-def rank_tickers(mkt_min, num_stocks):
+def tickers_to_csv(mkt_min, num_stocks):
     t_list = grab_tickers(mkt_min, num_stocks)
     data = [["Ticker","ROC","Earnings Yield"]]
-
-    
 
     #for i in range(0,2,1):
     for i in range(0,num_stocks,1):
@@ -122,7 +120,7 @@ def rank_tickers(mkt_min, num_stocks):
 
     data_to_csv(data)
 
-    return data
+    return
 
 # REQUIRES: Browser on a Yahoo finance stock website
 def nav_to_income(browser):
@@ -157,7 +155,6 @@ def scrape_variables(ticker_name, mkt):
     nav_to_income(browser)
     nav_to_quarterly(browser)
     ebit = get_ebit(browser) # Done
-    
 
     total_debt = long_debt + current_liab
     ent_val = mkt_cap + total_debt - cash
@@ -165,7 +162,6 @@ def scrape_variables(ticker_name, mkt):
     earn_yield = ebit / ent_val
     roc = ebit / (work_cap + fixed_assets)
 
-    
     return [roc, earn_yield]
 
 
@@ -181,19 +177,15 @@ def get_ebit(browser):
         return total_rev - cost_of_rev - op_expenses
 
 def get_total_rev(browser):
-    
     total_rev = browser.find_element_by_xpath("//*[@title='Total Revenue']//parent::div//following-sibling::div[2]").text
     return text_to_float(total_rev)
 
 def get_cost_of_rev(browser):
-
     cost_rev = browser.find_element_by_xpath("//*[@title='Cost of Revenue']//parent::div//following-sibling::div[2]").text
     return text_to_float(cost_rev)
 
 def get_op_expenses(browser):
-    
     op_exp = browser.find_element_by_xpath("//*[@title='Operating Expense']//parent::div//following-sibling::div[2]").text
-
     return text_to_float(op_exp)
 
 
@@ -223,12 +215,10 @@ def get_working_cap(browser):
         return current_assets - current_liabilities
     
 def get_current_assets(browser):
-    
     curr_assets = browser.find_element_by_xpath("//*[@title='Current Assets']//parent::div//following-sibling::div[@data-test='fin-col']").text
     return text_to_float(curr_assets)
 
 def get_current_liabilities(browser):
-    
     curr_liab = browser.find_element_by_xpath("//*[@title='Current Liabilities']//parent::div//following-sibling::div[@data-test='fin-col']").text
     return text_to_float(curr_liab)
 
@@ -256,26 +246,10 @@ def get_net_ppe(browser):
 
 
 def expand_sheet(browser):
-    
     expand = browser.find_element_by_xpath('//*[@id="Col1-1-Financials-Proxy"]/section/div[2]/button/div/span')
     if(expand.text == 'Expand All'):
         button = browser.find_element_by_class_name('expandPf')
         browser.execute_script("arguments[0].click();", button)
-    '''
-    used=[]
-    all_clicked = False
-    while not all_clicked:
-        new_buttons = browser.find_elements_by_class_name('tgglBtn')
-        for button in used:
-            if button in new_buttons:
-                new_buttons.remove(button)
-        if len(new_buttons) == 0:
-            all_clicked = True
-        for button in new_buttons:
-                used.append(button)
-                browser.execute_script("arguments[0].click();", button)
-        #time.sleep(0.5)
-    '''
     return
 
 def text_to_float(number):
