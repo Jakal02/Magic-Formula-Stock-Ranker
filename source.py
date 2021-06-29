@@ -78,7 +78,7 @@ def change_num_stocks(browser, stock_num):
 def select_num_stocks():
     while True:
         try:
-            val = int(input('Would you like to see 30 or 50 stocks? '))
+            val = int(input('\nWould you like to see 30 or 50 stocks? '))
             if(val != 30 and val != 50):
                 print('Please enter 30 or 50')
                 continue
@@ -172,7 +172,7 @@ def scrape_variables(ticker_name, mkt):
 
 def get_ebit(browser):
     try:
-        ebit = browser.find_element_by_xpath("//*[@title='EBIT']//parent::div//following-sibling::div[2]").text
+        ebit = browser.find_element_by_xpath("//*[@title='EBIT']//parent::div[1]//following-sibling::div[@data-test='fin-col'][1]").text
         return text_to_float(ebit)
     except:
         total_rev = get_total_rev(browser)
@@ -302,7 +302,7 @@ def data_to_csv(data, style='w'):
 #print(yf.Ticker('BKE').balance_sheet)
 # Need to fix data that is missing
 
-print(scrape_variables('WTRH', 221.54))
+#print(scrape_variables('VYGR', 164.12))
 
 '''
 Variables I need:

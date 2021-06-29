@@ -15,4 +15,4 @@ t = rank_tickers(mkt_min,stock_num)
 #print(grab_tickers(mkt_min,stock_num))
 
 
-print("Done")
+print("Successly written all",stock_num,"with multiples into data.csv")
