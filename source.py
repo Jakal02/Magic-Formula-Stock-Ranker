@@ -99,7 +99,16 @@ def select_mkt_cap():
             print('Please enter a whole number')
     return val
 
-
+def will_refresh_data():
+    val = ""
+    while True:
+        val = input("Would you like to update the stock data on file? (y/n)").lower()
+        if(val != 'n' and val != 'y'):
+            print("Please Enter either 'y' or 'n'")
+            continue
+        break
+    
+    return val
 ##### Write 30/50 stocks ROC and Enterprise Value to csv file ##########
 
 def tickers_to_csv(mkt_min, num_stocks):
@@ -162,14 +171,14 @@ def scrape_variables(ticker_name, mkt):
     earn_yield = ebit / ent_val
     roc = ebit / (work_cap + fixed_assets)
 
+    browser.close()
     return [roc, earn_yield]
 
 
 
 def get_ebit(browser):
     try:
-        ebit = browser.find_element_by_xpath("//*[@title='EBIT']//parent::div[1]//following-sibling::div[@data-test='fin-col'][1]").text
-        return text_to_float(ebit)
+        return get_income_sheet_var(browser,"EBIT")
     except:
         total_rev = get_total_rev(browser)
         cost_of_rev = get_cost_of_rev(browser)
@@ -177,17 +186,11 @@ def get_ebit(browser):
         return total_rev - cost_of_rev - op_expenses
 
 def get_total_rev(browser):
-    total_rev = browser.find_element_by_xpath("//*[@title='Total Revenue']//parent::div//following-sibling::div[2]").text
-    return text_to_float(total_rev)
-
+    return get_income_sheet_var(browser,"Total Revenue")
 def get_cost_of_rev(browser):
-    cost_rev = browser.find_element_by_xpath("//*[@title='Cost of Revenue']//parent::div//following-sibling::div[2]").text
-    return text_to_float(cost_rev)
-
+    return get_income_sheet_var(browser,"Cost of Revenue")
 def get_op_expenses(browser):
-    op_exp = browser.find_element_by_xpath("//*[@title='Operating Expense']//parent::div//following-sibling::div[2]").text
-    return text_to_float(op_exp)
-
+    return get_income_sheet_var(browser,"Operating Expense")
 
 
 def get_long_debt(browser):
@@ -202,47 +205,49 @@ def get_long_debt(browser):
     return text_to_float(long_debt)
 
 def get_cash(browser):
-    cash = browser.find_element_by_xpath("//*[@title='Cash And Cash Equivalents']//parent::div//following-sibling::div[@data-test='fin-col']").text
-    return text_to_float(cash)
+    return get_balance_sheet_var(browser, "Cash And Cash Equivalents")
 
 def get_working_cap(browser):
     try:
-        work_cap = browser.find_element_by_xpath("//*[@title='Working Capital']//parent::div//following-sibling::div[@data-test='fin-col']").text
-        return text_to_float(work_cap)
+        return get_balance_sheet_var(browser,"Working Capital")
     except:
         current_assets = get_current_assets(browser)
         current_liabilities = get_current_liabilities(browser)
         return current_assets - current_liabilities
     
 def get_current_assets(browser):
-    curr_assets = browser.find_element_by_xpath("//*[@title='Current Assets']//parent::div//following-sibling::div[@data-test='fin-col']").text
-    return text_to_float(curr_assets)
+    return get_balance_sheet_var(browser, "Current Assets")
 
 def get_current_liabilities(browser):
-    curr_liab = browser.find_element_by_xpath("//*[@title='Current Liabilities']//parent::div//following-sibling::div[@data-test='fin-col']").text
-    return text_to_float(curr_liab)
+    return get_balance_sheet_var(browser,"Current Liabilities")
 
 def get_fixed_assets(browser):
-
     accum = get_accumulated_depreciation(browser)
-
     fixed_assets = get_net_ppe(browser)
 
     return fixed_assets - accum
 
 def get_accumulated_depreciation(browser):
-    accum = '0'
-    try:
-        accum = browser.find_element_by_xpath("//*[@title='Accumulated Depreciation']//parent::div//following-sibling::div[@data-test='fin-col']").text
-    except:
-        accum = '0'
-    accum = text_to_float(accum)
-    return accum
-
+    return get_balance_sheet_var(browser,'Accumulated Depreciation')
 def get_net_ppe(browser):
-    fixed_assets = browser.find_element_by_xpath("//*[@title='Net PPE']//parent::div//following-sibling::div[@data-test='fin-col']").text
-    return text_to_float(fixed_assets)
+    return get_balance_sheet_var(browser, 'Net PPE')
 
+
+def get_balance_sheet_var(browser, word):
+    xpath = "//*[@title='"+word+"']//parent::div//following-sibling::div[@data-test='fin-col']"
+    return get_table_var(browser,xpath,word)
+
+def get_income_sheet_var(browser, word):
+    xpath = "//*[@title='"+word+"']//parent::div[1]//following-sibling::div[@data-test='fin-col'][1]"
+    return get_table_var(browser,xpath,word)
+
+def get_table_var(browser,xpath,word):
+    try:
+        var = browser.find_elements_by_xpath(xpath)
+        var= var[0].text
+    except:
+        print(word,"could not be found on the balance sheet")
+    return text_to_float(var)
 
 
 def expand_sheet(browser):
@@ -271,12 +276,8 @@ def data_to_csv(data, style='w'):
 #######################################################################
 #######################################################################
 #######################################################################
-#print(rank_tickers(50,30))
-#print(yf.Ticker('ASO').balance_sheet)
-#print(yf.Ticker('BKE').balance_sheet)
-# Need to fix data that is missing
 
-#print(scrape_variables('VYGR', 164.12))
+print(scrape_variables('ASO', 3793.97))
 
 '''
 Variables I need:
