@@ -1,34 +1,41 @@
 # Password Manager
 import os
 import csv
+
+#
 #Func Password Grab
-
 #Step 1: Look for pass.txt in file
-
 #Step 2: If found, return info
-#        If not, create file and ask for pass
-
-
+#        If not, create file and ask for their user/pass
 
 def get_cred():
     loc = os.path.dirname(os.path.abspath(__file__))
-    is_in = find_pass_file(loc)
+    is_in = __find_pass_file(loc)
     if(is_in == True):
         print("\nCredentials Found\n")
-        return read_pass_file()
+        return __read_pass_file()
     else:
         print("\nCredentials not found\n")
-        return make_pass_file()
+        return __make_pass_file()
+
+def change_pass_file():
+    # Ask user for new username & pass
+    
+    return "Hi"
+
+###                   ###
+### Private Functions ###
+###                   ###
 
 
-def find_pass_file(location):
+def __find_pass_file(location):
     name = "passwords.csv"
     for root, dirs, files in os.walk(location):
         if name in files:
             return True #os.path.join(root, name)
     return False
 
-def make_pass_file():
+def __make_pass_file():
     user = input("Please enter your username for magicformulainvesting: ")
     passw = input("Please enter your password for magicformulainvesting: ")
     with open('passwords.csv', 'w') as csvfile:
@@ -37,14 +44,10 @@ def make_pass_file():
         print("Credentails Saved")
         return [user,passw]
 
-def read_pass_file():
+def __read_pass_file():
     with open('passwords.csv', 'r') as csvfile:
         reader = list(csv.reader(csvfile))
         user = reader[0][1]
         passw = reader[0][2]
         return [user,passw]
 
-def change_pass_file():
-    # Ask user for new username & pass
-    
-    return "Hi"
