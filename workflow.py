@@ -1,25 +1,31 @@
 
 import magicsite
-import yahoosite
-
+#import dataroma
+#import finviz
+#import vic
+import pandas as pd
 
 ### Grab Tickers from magicformulainvesting.com ###
-# 2D array: row = [Ticker, mkt cap(millions)]
+
 tickers_data = magicsite.grab_tickers()
-### Calculate ROC and Earnings Yield for each ticker ###
-### Uses Yahoo Finance ###
+tickers_only = pd.DataFrame(tickers_data["Ticker"],columns=["Ticker"])
 
-# 2D array: row = [Ticker, ROC, Earnings Yield]
-magic_formula_data = yahoosite.find_roc_and_eyield(tickers_data)
-print(magic_formula_data)
-### Find inside ownership and chng in it for past 6 months ###
-### Uses Finviz ###
-insider_data = ""
+### Get # of Superinvestors ###
+guru_data = magicsite.get_num_gurus(tickers_only)
 
+### Get Most Recent VIC writeup ###
+vic_data = magicsite.get_vic_writeup(tickers_only)
 
-### Find # of Superinvestors in it, and weighting of highest conviction investor ###
-super_data = ""
+### Get InsiderInformation ###
+insider_data = magicsite.get_insider_ownership(tickers_only)
 
+### Append data to original set ###
+l = [guru_data,vic_data,insider_data]
+for i in l:
+    tickers_data = tickers_data.merge(i)
 
+### Write to csv file to paste into google sheets ###
+with open('magic.csv','w') as csv_file:
+    tickers_data.to_csv(path_or_buf = csv_file,line_terminator='\n',index=False)
 
-### Take this data and put it into a csv file ### 
+### Done ###

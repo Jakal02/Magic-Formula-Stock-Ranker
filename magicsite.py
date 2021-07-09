@@ -1,9 +1,10 @@
 import driver
 import password
+import pandas as pd
 
 # REQUIRES: None
 # MODIFIES: None
-# RETURNS: 2D array: row = [Ticker, mkt cap(millions)]
+# RETURNS: pd dataframe: Columns = [ticker, mkt cap (mil)]
 def grab_tickers():
     # Log in to Screener
     browser = driver.init_browser()
@@ -19,11 +20,84 @@ def grab_tickers():
     # Run Screener
     tickers = __screen_data(browser)
     browser.close()
-    return tickers
+    return pd.DataFrame(tickers[1:],columns=tickers[0])
+
+def print_tickers(tickers):
+    i = 0
+    for tick in tickers:
+        if(i==0):
+            i = 1
+            continue
+        print(tick[0],end="")
+        
+        if(i < len(tickers)-1):
+            print(",",end="")
+        i = i +1
+    print("")
+    return
+
+#REQUIRES: tickers is a pd dataframe with a column of tickers
+#MODIFIES: None
+#RETURNS: a modified pd dataframe with column of num_gurus added
+
+def get_num_gurus(tickers):
+    tickers_list = tickers["Ticker"]
+    url_base = "https://www.dataroma.com/m/stock.php?sym="
+    list_ownership= pd.DataFrame(columns=["Ticker","Gurus"])
+    for ticker in tickers_list:
+        try:
+            data_table = pd.read_html(url_base+ticker)[0]
+            ownership_count = int(data_table[1][2])
+        except:
+            ownershp_count=0
+        list_ownership = list_ownership.append({"Ticker":ticker,"Gurus":ownership_count},ignore_index=True)
+    return tickers.merge(list_ownership)
+
+#REQUIRES: tickers is a pd dataframe with a column of tickers
+#MODIFIES: None
+#RETURNS: a modified pd dataframe with column of when the most revent VIC writeup was
+def get_vic_writeup(tickers):
+    # MUST log in to VIC so results show up
+    browser = driver.init_browser()
+    __log_in_vic(browser)
+
+    tickers_list = tickers["Ticker"]
+    list_writeup = pd.DataFrame(columns=["Ticker","VIC"])
+    for ticker in tickers_list:
+        try:
+            data_table = __get_writeups(ticker,browser)
+            #need function to select right row in data table
+            writeup = __find_recent_writeup(data_table)
+            if data_table.empty:
+                writeup = 'None'
+        except:
+                writeup = 'None'
+        list_writeup= list_writeup.append({"Ticker":ticker,"VIC":writeup},ignore_index=True)
+    browser.close()
+    return tickers.merge(list_writeup)
+
+#REQUIRES: tickers is a pd dataframe with a column of tickers
+#MODIFIES: None
+#RETURNS: 
+def get_insider_ownership(tickers):
+    #must log in so Cloudfare doesn't block you
+    browser = driver.init_browser()
+
+    tickers_list = tickers["Ticker"]
+    list_ins = pd.DataFrame(columns=["Ticker","Insider Ownership","6 Month Change"])
+    for ticker in tickers_list:
+        try:
+            ownership,change = __get_insider_info(ticker,browser)
+        except:
+            ownership,change = 0,0
+        list_ins = list_ins.append({"Ticker":ticker,"Insider Ownership":ownership,"6 Month Change":change},ignore_index=True)
+    browser.close()
+    return tickers.merge(list_ins)
 
 ###                   ###
 ### Private Functions ###
 ###                   ###
+
 
 
 #REQUIRES: Selenium Webdriver object
@@ -99,14 +173,14 @@ def __enter_min_mkt_cap(browser,mkt_min):
 #REQUIRES: Selenium Webdriver obj at mfi.com screening page with appropriate
 #          user preferences entered
 #MODIFIES: Clicks the button to run the screener
-#RETURNS: 2D array: row = [Ticker, mkt cap(millions)]
+#RETURNS: Pandas Dataframe Columns = [ticker, mkt cap (mil)]
 def __screen_data(browser):
     browser.find_element_by_id('stocks').click()
     before_XPath = "//*[@id='tableform']/table/tbody/tr["
     aftertd_XPath = "]/td["
     aftertr_XPath = "]"
     rows = len(browser.find_elements_by_xpath("//*[@id='tableform']/table/tbody/tr"))
-    data = []
+    data = [["Ticker","Mkt Cap"]]
     for t_row in range(1, (rows + 1)):
         #name_path = before_XPath + str(t_row) + aftertd_XPath + "1" + aftertr_XPath
         ticker_path = before_XPath + str(t_row) + aftertd_XPath + "2" + aftertr_XPath
@@ -115,4 +189,77 @@ def __screen_data(browser):
         ticker = browser.find_element_by_xpath(ticker_path).text
         mkt_cap = float(browser.find_element_by_xpath(mkt_path).text.replace(',',''))
         data.append( [ticker,mkt_cap] )
+    
     return data
+
+#########################################################################
+#########################################################################
+
+#REQUIRES: Selenium browser object
+#MODIFIES: The webpage
+#RETURNS: Nothing
+def __log_in_vic(browser):
+    url = "https://www.valueinvestorsclub.com/login"
+    browser.get(url)
+    browser.find_element_by_name("login[login_name]").send_keys("egrubbs1234")
+    browser.find_element_by_name("login[password]").send_keys("yQx9bw")
+    browser.find_element_by_id("login_btn").click()
+    return
+
+#REQUIRES: The ticker of a company, as a string
+#MODFIES: None
+#RETURNS: pd dataframe of all writeups that have the ticker as a substring in the name
+#         empty pd dataframe if none found
+def __get_writeups(ticker,browser):
+    browser.get("https://www.valueinvestorsclub.com/search/"+ticker)
+    source = str(browser.page_source)
+    data_table = pd.read_html(source)[0]
+    if 'MEMBER' in data_table.columns:
+        data_table = pd.read_html(source)[1]
+        
+    if data_table.columns[0].find("KEYWORDS IN DESCRIPTION") != -1:
+        data_table = pd.DataFrame()
+    return data_table
+
+#REQUIRES: pd Dataframe of shape: x rows 1 column pulled from valueinvestorsclub.com
+#MODIFIES: None
+#RETURNS: String containing date of most recent relevant writeup
+def __find_recent_writeup(data,ticker):
+    col = "COMPANY  AUTHOR  PUBLISHED DATE"
+    for item in data[col]:
+            lst = item.split("  ")
+            key = lst[0]
+            if __is_right_key(key,ticker):
+                return lst[-1]
+    return "None"
+
+#REQUIRES: ticker string, and string of company title as attached to a vic writeup
+#MODIFIES: None
+#RETURNS: True or False based on if the key string refers to the ticker
+def __is_right_key(key,ticker):
+    last = key.split(" ")[-1]
+    if last == ticker:
+        return True
+    ticker = "("+ticker+")"
+    if last == ticker:
+        return True
+    if ticker.find(last) == 0:
+        return True
+    return False
+
+#########################################################################
+#########################################################################
+
+def __get_insider_info(ticker,browser):
+    browser.get("https://finviz.com/quote.ashx?t="+ticker)
+    source = browser.find_element_by_xpath("//*[@class='snapshot-table2']//parent::div").get_attribute('innerHTML')
+    data_table = pd.read_html(str(source))[3][7][0:2]
+    return_pkg = []
+    for data in data_table:
+        data = float(data.replace("%",""))
+        return_pkg.append(data)
+    return return_pkg
+
+########## Test Area ###########
+
+
