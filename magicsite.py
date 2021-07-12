@@ -44,13 +44,18 @@ def get_num_gurus(tickers):
     tickers_list = tickers["Ticker"]
     url_base = "https://www.dataroma.com/m/stock.php?sym="
     list_ownership= pd.DataFrame(columns=["Ticker","Gurus"])
+    num_tick = len(tickers_list)
+    i=1
     for ticker in tickers_list:
+        print("Getting Guru info on stock",i,"of",num_tick)
         try:
             data_table = pd.read_html(url_base+ticker)[0]
             ownership_count = int(data_table[1][2])
         except:
+            print("Webpage Error for",ticker)
             ownershp_count=0
         list_ownership = list_ownership.append({"Ticker":ticker,"Gurus":ownership_count},ignore_index=True)
+        i=i+1
     return tickers.merge(list_ownership)
 
 #REQUIRES: tickers is a pd dataframe with a column of tickers
@@ -58,39 +63,51 @@ def get_num_gurus(tickers):
 #RETURNS: a modified pd dataframe with column of when the most revent VIC writeup was
 def get_vic_writeup(tickers):
     # MUST log in to VIC so results show up
-    browser = driver.init_browser()
+    browser = driver.init_browser(no_window=False)
     __log_in_vic(browser)
 
     tickers_list = tickers["Ticker"]
     list_writeup = pd.DataFrame(columns=["Ticker","VIC"])
+
+    num_tick = len(tickers_list)
+    i=1
     for ticker in tickers_list:
+        print("Getting Writeup info on stock",i,"of",num_tick)
         try:
             data_table = __get_writeups(ticker,browser)
             #need function to select right row in data table
-            writeup = __find_recent_writeup(data_table)
+            writeup = __find_recent_writeup(data_table,ticker)
             if data_table.empty:
+                print("No writeup for",ticker)
                 writeup = 'None'
         except:
+                print("Webpage Error for",ticker)
                 writeup = 'None'
         list_writeup= list_writeup.append({"Ticker":ticker,"VIC":writeup},ignore_index=True)
+        i=i+1
     browser.close()
     return tickers.merge(list_writeup)
 
 #REQUIRES: tickers is a pd dataframe with a column of tickers
 #MODIFIES: None
-#RETURNS: 
+#RETURNS:  a modified pd dataframe with column of
 def get_insider_ownership(tickers):
     #must log in so Cloudfare doesn't block you
     browser = driver.init_browser()
 
     tickers_list = tickers["Ticker"]
     list_ins = pd.DataFrame(columns=["Ticker","Insider Ownership","6 Month Change"])
+    num_tick = len(tickers_list)
+    i=1
     for ticker in tickers_list:
+        print("Getting insider info on stock",i,"of",num_tick)
         try:
             ownership,change = __get_insider_info(ticker,browser)
         except:
+            print("Webpage Error for",ticker)
             ownership,change = 0,0
         list_ins = list_ins.append({"Ticker":ticker,"Insider Ownership":ownership,"6 Month Change":change},ignore_index=True)
+        i=i+1
     browser.close()
     return tickers.merge(list_ins)
 
@@ -238,7 +255,7 @@ def __find_recent_writeup(data,ticker):
 #RETURNS: True or False based on if the key string refers to the ticker
 def __is_right_key(key,ticker):
     last = key.split(" ")[-1]
-    if last == ticker:
+    if last.upper() == ticker:
         return True
     ticker = "("+ticker+")"
     if last == ticker:

@@ -1,8 +1,5 @@
 
 import magicsite
-#import dataroma
-#import finviz
-#import vic
 import pandas as pd
 
 ### Grab Tickers from magicformulainvesting.com ###
@@ -11,6 +8,7 @@ tickers_data = magicsite.grab_tickers()
 tickers_only = pd.DataFrame(tickers_data["Ticker"],columns=["Ticker"])
 
 ### Get # of Superinvestors ###
+guru_data = None
 guru_data = magicsite.get_num_gurus(tickers_only)
 
 ### Get Most Recent VIC writeup ###
