@@ -75,7 +75,6 @@ def get_vic_writeup(tickers):
         print("Getting Writeup info on stock",i,"of",num_tick)
         try:
             data_table = __get_writeups(ticker,browser)
-            #need function to select right row in data table
             writeup = __find_recent_writeup(data_table,ticker)
             if data_table.empty:
                 print("No writeup for",ticker)
@@ -92,7 +91,6 @@ def get_vic_writeup(tickers):
 #MODIFIES: None
 #RETURNS:  a modified pd dataframe with column of
 def get_insider_ownership(tickers):
-    #must log in so Cloudfare doesn't block you
     browser = driver.init_browser()
 
     tickers_list = tickers["Ticker"]
@@ -218,8 +216,9 @@ def __screen_data(browser):
 def __log_in_vic(browser):
     url = "https://www.valueinvestorsclub.com/login"
     browser.get(url)
-    browser.find_element_by_name("login[login_name]").send_keys("egrubbs1234")
-    browser.find_element_by_name("login[password]").send_keys("yQx9bw")
+    user,passw = password.get_cred(type="vic")
+    browser.find_element_by_name("login[login_name]").send_keys(user)
+    browser.find_element_by_name("login[password]").send_keys(passw)
     browser.find_element_by_id("login_btn").click()
     return
 

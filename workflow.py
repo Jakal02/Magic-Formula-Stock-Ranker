@@ -9,7 +9,7 @@ tickers_only = pd.DataFrame(tickers_data["Ticker"],columns=["Ticker"])
 
 ### Get # of Superinvestors ###
 guru_data = None
-guru_data = magicsite.get_num_gurus(tickers_only)
+#guru_data = magicsite.get_num_gurus(tickers_only)
 
 ### Get Most Recent VIC writeup ###
 vic_data = magicsite.get_vic_writeup(tickers_only)
