@@ -8,4 +8,5 @@ It will also grab:
 - How many superinvestors have positions(dataroma.com)
 - When the most recent VIC writeup was(valueinvestorsclub.com)
 - What the insider ownership is and 6 month change in insider ownership has been(finviz.com)
-\nFor each ticker from the magicformula website
+
+For each ticker from the magicformula website
